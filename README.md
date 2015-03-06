@@ -18,10 +18,11 @@ Maven (mvn) would download all dependency third-party libraries automatically.
 
 ## Known Issues
 This is my first time writing a crawler app. 
-* start date and end date not parse yet. 
-* plan to use logging framework slf4j over log4j2
-* multi-thread support: The program is now single-threaded, and takes about 1.5 minutes to finish on my Mac OSX. Could use a thread-pool to speed up the processing.
 * Currently, there are fewer than 3,000 shows fetched. I am assuming your filesystem support at least that number of files per directory.
+
+## Future
+* Use logging framework slf4j + log4j2 instead of System.out
+* Multi-thread support: The program is now single-threaded, and takes about 5 minutes to finish on my Macbook Pro. It could use a thread-pool to speed up the processing.
 
 
 
