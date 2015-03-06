@@ -43,10 +43,14 @@ import static java.nio.file.Files.newBufferedReader;
  */
 public class Util {
 
-    // ObjectMapper is thread-safe
+    // Jackson ObjectMapper is thread-safe, so make it static for sharing among threads
     private static final ObjectMapper mapper = new ObjectMapper();
 
-
+    /**
+     * Replace non-word character (alphanumeric) with underscore
+     * @param in input String
+     * @return converted String
+     */
     public static String replaceSpecialCharacterWithUnderscore(String in) {
         if (in == null) {
             return null;
@@ -54,6 +58,11 @@ public class Util {
         return in.replaceAll("\\W", "_");
     }
 
+    /**
+     * Read a file from disk as a list of String
+     * @param filepath path on disk
+     * @return List of String
+     */
     public static List<String> readLinesFromFile(String filepath) {
         try {
             BufferedReader reader =
@@ -73,11 +82,22 @@ public class Util {
         return null;
     }
 
+    /**
+     * Write JSON object to disk with Jackson writer.
+     * @param filename path on disk
+     * @param obj JSON object with Jackson annotation
+     * @throws IOException Fail to write to disk
+     */
     public static void toFile(String filename, Object obj) throws IOException {
-        //Files.write(Paths.get(filename), obj.toString().getBytes());
         mapper.writerWithDefaultPrettyPrinter().writeValue(new File(filename), obj);
     }
 
+    /**
+     * Get file content as UTF-8 string
+     * @param path path on disk
+     * @return StringBuilder (for later append)
+     * @throws IOException Fail to read from disk
+     */
     public static StringBuilder getFileContentAsUTF8String(String path) throws IOException {
 
         BufferedReader reader = newBufferedReader(Paths.get(path), StandardCharsets.UTF_8);
