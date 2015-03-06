@@ -9,6 +9,16 @@ The command "mvn install" runs the main program to filter a list of TV shows fro
 * Mac OSX or Linux
 * Java 7 SDK installed
 * Maven installed
+* $JAVA_HOME must be set
+
+### Setting $JAVA_HOME for Mac OSX
+
+    # if this command returns blank line, then run the following line to set JAVA_HOME, before running mvn install
+    echo $JAVA_HOME  
+    
+
+    JAVA_HOME=/Library/Java/JavaVirtualMachines/{your Java 7 JDK}/Contents/Home
+    mvn install
 
 ## How To Run
 Type the following at the project root:
