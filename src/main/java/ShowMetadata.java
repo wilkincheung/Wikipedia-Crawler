@@ -1,13 +1,35 @@
+/**
+ * The MIT License (MIT)
+
+ Copyright (c) 2015 Wilkin Cheung
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonRootName;
 
 import java.util.ArrayList;
 import java.util.List;
 
 
 /**
- * Java Bean
+ * Java Bean that holds TV Show metadata. Also contains Jackson JSON annotation for converting into JSON String.
  *
  * @author Wilkin Cheung
  */
@@ -16,15 +38,15 @@ public class ShowMetadata {
      * JSON Format:
      * <p/>
      * {
-     * title: "",
-     * genre: "",
-     * creators: ["name 1", "name 2", ...],
-     * cast: ["name 1", "name 2", ...],
-     * country_of_origin: "",
-     * seasons: 123,
-     * episodes: 123,
-     * start_date: (ISO-8601 Date String),
-     * end_date: (ISO-8601 Date String)
+     *  title: "",
+     *  genre: "",
+     *  creators: ["name 1", "name 2", ...],
+     *  cast: ["name 1", "name 2", ...],
+     *  country_of_origin: "",
+     *  seasons: 123,
+     *  episodes: 123,
+     *  start_date: (ISO-8601 Date String),
+     *  end_date: (ISO-8601 Date String)
      * }
      */
 
@@ -106,16 +128,16 @@ public class ShowMetadata {
     @JsonProperty("title")
     String title;
 
-    @JsonProperty("genres")
+    @JsonProperty("genre")
     List<String> genres = new ArrayList<String>();
 
     @JsonProperty("creators")
     List<String> creators = new ArrayList<String>();
 
-    @JsonProperty("casts")
+    @JsonProperty("cast")
     List<String> casts = new ArrayList<String>();
 
-    @JsonProperty("countryOfOrigin")
+    @JsonProperty("country_of_origin")
     String countryOfOrigin;
 
     @JsonProperty("seasons")
@@ -124,10 +146,10 @@ public class ShowMetadata {
     @JsonProperty("episodes")
     String episodes;
 
-    @JsonProperty("startDate")
+    @JsonProperty("start_date")
     String startDate;
 
-    @JsonProperty("endDate")
+    @JsonProperty("end_date")
     String endDate;
 
 

@@ -1,10 +1,32 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
+/**
+ * The MIT License (MIT)
+
+ Copyright (c) 2015 Wilkin Cheung
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,9 +34,10 @@ import java.util.regex.Matcher;
 
 import static org.junit.Assert.*;
 
-
+/**
+ * Junit test for the Crawler app.
+ */
 public class ProcessorTest {
-
 
     /**
      * Full-fledge test. This actually runs the entire program.
@@ -22,17 +45,6 @@ public class ProcessorTest {
     @Test
     public void test_Application_integration_test() {
         new Application();
-    }
-
-    /**
-     * Utility method to load file that contains HTML fragment
-     */
-    private String loadFile(String filename) throws IOException {
-        String path = getClass().getClassLoader().getResource(filename).getPath();
-
-        StringBuilder buffer = Util.getFileContentAsUTF8String(path);
-
-        return buffer.toString();
     }
 
     @Test
@@ -57,20 +69,7 @@ public class ProcessorTest {
     }
 
     @Test
-    public void testJson() throws IOException {
-        ShowMetadata show = new ShowMetadata();
-        show.setTitle("Walking DEAD");
-        show.setStartDate("3000-01-01");
-
-        ObjectMapper mapper = new ObjectMapper();
-        System.out.println(mapper.writeValueAsString(show));
-
-        File f = new File("WD.json");
-        mapper.writerWithDefaultPrettyPrinter().writeValue(f, show);
-        System.out.println(f.getAbsolutePath());
-    }
-
-    @Test
+    @Ignore
     public void test_original_run() throws IOException {
         String html = loadFile("wd_alternate_original_run.html");
 
@@ -100,12 +99,23 @@ public class ProcessorTest {
     }
 
     @Test
-    @Ignore
     public void testReplace() {
 
         assertEquals("15_Love", Util.replaceSpecialCharacterWithUnderscore("15/Love"));
         assertEquals("Hello_World_", Util.replaceSpecialCharacterWithUnderscore("Hello?World!"));
         assertEquals("__Hello_World_", Util.replaceSpecialCharacterWithUnderscore("((Hello)World)"));
 
+    }
+
+
+    /**
+     * Utility method to load file that contains HTML fragment
+     */
+    private String loadFile(String filename) throws IOException {
+        String path = getClass().getClassLoader().getResource(filename).getPath();
+
+        StringBuilder buffer = Util.getFileContentAsUTF8String(path);
+
+        return buffer.toString();
     }
 }

@@ -1,7 +1,30 @@
+/**
+ * The MIT License (MIT)
+
+ Copyright (c) 2015 Wilkin Cheung
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
 import java.util.regex.Pattern;
 
 /**
- * Constants
+ * Class that holds all Constants for this project.
  *
  * @author Wilkin Cheung
  */
@@ -13,14 +36,15 @@ public class Constants {
     // Crawler entry point
     public static final String CRAWLER_URL = WIKIPEDIA_ROOT + "/wiki/List_of_television_programs_by_name";
 
+    // File that temporary holds a list of TV Shows
     public static final String FILE_LIST_OF_TV_SHOWS = "list_of_tv_shows.txt";
 
-    //public static final String TV_SHOW_FILE_LOCATION = "/Users/wicheung/workspace/untitled/" + Constants.FILE_LIST_OF_TV_SHOWS;
-    public static final String TV_SHOW_FILE_LOCATION = Constants.FILE_LIST_OF_TV_SHOWS;
-
+    // Json file extension
     public static final String JSON_FILE_EXTENSION = ".json";
 
+    // For limit comparison
     public static final int UNLIMITED = -1;
 
+    // ISO-8601 Date Pattern (ie. YYYY-MM-DD)
     public static final Pattern DATE_PATTERN_ISO_8601 = Pattern.compile("([0-9]{4}-[0-9]{2}-[0-9]{2})");
 }

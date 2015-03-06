@@ -1,3 +1,26 @@
+/**
+ * The MIT License (MIT)
+
+ Copyright (c) 2015 Wilkin Cheung
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
 import org.jsoup.Jsoup;
 import org.jsoup.helper.StringUtil;
 import org.jsoup.nodes.Document;
@@ -13,36 +36,55 @@ import java.util.regex.Pattern;
 /**
  * Core Parser and processor for TV Show. This is the workhorse.
  *
- * Convert HTML fragment into Jsoup objects (DOM). Walk the DOM. Extract TV Show metadata.
+ * Convert HTML fragment into Jsoup objects (DOM). Walk the DOM. Extract TV Show metadata. Save each TV Show as
+ * JSON to disk.
+ *
  *
  * @author Wilkin Cheung
  */
 public class TVShowProcessor {
 
+    // List of TV Shows to be processed
     private List<String> shows = new ArrayList<String>();
 
+    // Max number of TV Shows to be processed
     private int limit = Constants.UNLIMITED;
 
+    // Has this class been initialized already?
     private boolean isInitialized = false;
 
+    // Statistics for the processor
     private Stat stat = new Stat();
 
 
+    /**
+     * Constructor
+     */
     public TVShowProcessor() {
     }
 
+    /**
+     * Overloaded Constructor for JUnit testing
+     * @param shows List of shows as String
+     */
     public TVShowProcessor(List<String> shows) {
         this.shows = shows;
         this.isInitialized = true;
     }
 
+    /**
+     * Initialize Show. Optionally read the list of TV Shows from disk.
+     */
     private void init() {
         if (shows.isEmpty()) {
-            shows = Util.readLinesFromFile(Constants.TV_SHOW_FILE_LOCATION);
+            shows = Util.readLinesFromFile(Constants.FILE_LIST_OF_TV_SHOWS);
         }
         this.isInitialized = true;
     }
 
+    /**
+     * Main process loop for all TV Shows.
+     */
     public void process() {
         if (!isInitialized) {
             init();
@@ -82,44 +124,11 @@ public class TVShowProcessor {
         info(" Number of errors: " + stat.errorCount);
     }
 
-
-    public List<String> getShows() {
-        return shows;
-    }
-
-    public void setShows(List<String> shows) {
-        this.shows = shows;
-    }
-
-
-    public int getLimit() {
-        return limit;
-    }
-
-    public void setLimit(int limit) {
-        this.limit = limit;
-    }
-
-    private static void debug(String s) {
-        //System.out.println(s);
-    }
-
     /**
-     * JSON Format:
-     * <p/>
-     * {
-     * title: "",
-     * genre: "",
-     * creators: ["name 1", "name 2", ...],
-     * cast: ["name 1", "name 2", ...],
-     * country_of_origin: "",
-     * seasons: 123,
-     * episodes: 123,
-     * start_date: (ISO-8601 Date String),
-     * end_date: (ISO-8601 Date String)
-     * }
+     * Fetch and process a single TV Show.
      *
-     * @throws IOException
+     * @param url a TV Show URL
+     * @throws IOException Fail to fetch from URL
      */
     public void processShow(String url) throws IOException {
 
@@ -130,8 +139,14 @@ public class TVShowProcessor {
         processShow(doc);
     }
 
+    /**
+     * Process a Jsoup Document.
+     * @param fullDocument Jsoup Document
+     * @throws IOException Fail to parse Document
+     */
     public void processShow(Document fullDocument) throws IOException {
 
+        // rely on table.infobox, which is the wikipedia box on the right side on each TV Show page.
         Elements infobox = fullDocument.select("table.infobox");
 
         Document innerDocument = Jsoup.parseBodyFragment(infobox.html());
@@ -147,7 +162,6 @@ public class TVShowProcessor {
             showMetadata = parseOneShow(bodyNode);
         } catch (Throwable e) {
             e.printStackTrace();
-
             return;
         }
 
@@ -166,6 +180,11 @@ public class TVShowProcessor {
         }
     }
 
+    /**
+     * Parse one TV Show into Java Bean
+     * @param bodyNode Jsoup Node
+     * @return ShowMetadata object
+     */
     public ShowMetadata parseOneShow(Node bodyNode) {
 
         ShowMetadata showMetadata = new ShowMetadata();
@@ -232,6 +251,12 @@ public class TVShowProcessor {
         return showMetadata;
     }
 
+    /**
+     * Extract original run (start date, end date) from a node
+     *
+     * @param currentNode Jsoup Node
+     * @param showMetadata Java bean
+     */
     private void extractFieldOriginalRun(Node currentNode, ShowMetadata showMetadata) {
         debug("IN: extractFieldOriginalRun");
         Node spanNode = findNextSpanSiblingNode(currentNode);
@@ -262,6 +287,11 @@ public class TVShowProcessor {
         }
     }
 
+    /**
+     * Find next non-text sibling from Jsoup Node
+     * @param currentNode Jsoup Node
+     * @return Node as String
+     */
     private String extractSingleField(Node currentNode) {
         // Lookup next few nodes, until hitting text node that is not empty
         // Then between currentNode and that text node, look for hyperlink <a> attribute "title"
@@ -271,6 +301,12 @@ public class TVShowProcessor {
         return endNode.toString();
     }
 
+    /**
+     * Find next sibling for fieldName (such as text) from Jsoup Node
+     * @param currentNode Jsoup Node
+     * @param fieldName String
+     * @return List of Nodes as String
+     */
     private List<String> extractFieldAsList(Node currentNode, String fieldName) {
 
         List<String> values = new ArrayList<String>();
@@ -339,14 +375,30 @@ public class TVShowProcessor {
         return values;
     }
 
+    /**
+     * Find next span sibling node
+     * @param currentNode Jsoup Node
+     * @return Next span sibling node
+     */
     private Node findNextSpanSiblingNode(Node currentNode) {
         return findNextNonEmptySiblingNode(currentNode, "span");
     }
 
+    /**
+     * Find next text sibling node
+     * @param currentNode Jsoup Node
+     * @return Next text sibling node
+     */
     private Node findNextTextSiblingNode(Node currentNode) {
         return findNextNonEmptySiblingNode(currentNode, "#text");
     }
 
+    /**
+     * Find next non empty sibling node
+     * @param currentNode  Jsoup Node
+     * @param findNodeType Node type (for example, text or span)
+     * @return Jsoup Node if found; null otherwise
+     */
     private Node findNextNonEmptySiblingNode(Node currentNode, String findNodeType) {
 
         Node nextNode = currentNode.nextSibling();
@@ -363,13 +415,57 @@ public class TVShowProcessor {
         return null;
     }
 
+
     /**
-     * Print info to Stdout
+     * Getter for list of TV Shows
+     * @return List of String
+     */
+    public List<String> getShows() {
+        return shows;
+    }
+
+    /**
+     * Getter for list of TV Shows
+     * @param shows List of String
+     */
+    public void setShows(List<String> shows) {
+        this.shows = shows;
+    }
+
+    /**
+     * Getter for limit
+     * @return int
+     */
+    public int getLimit() {
+        return limit;
+    }
+
+    /**
+     * Setter for limit
+     * @param limit int
+     */
+    public void setLimit(int limit) {
+        this.limit = limit;
+    }
+
+    /**
+     * Utility method to print a debug statement to STDOUT
+     * @param s String
+     */
+    private static void debug(String s) {
+        //System.out.println(s);
+    }
+
+    /**
+     * Utility method to print info to Stdout
      */
     private void info(Object s) {
         System.out.println(s);
     }
 
+    /**
+     * Utility class to store stats.
+     */
     private static class Stat {
         int errorCount;
         int successCount;
