@@ -1,4 +1,6 @@
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRootName;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +28,80 @@ public class ShowMetadata {
      * }
      */
 
+    @JsonIgnore
     String filename;
+
+    public String getTitle() {
+        return title;
+    }
+
+    public List<String> getGenres() {
+        return genres;
+    }
+
+    public List<String> getCreators() {
+        return creators;
+    }
+
+    public List<String> getCasts() {
+        return casts;
+    }
+
+    public String getCountryOfOrigin() {
+        return countryOfOrigin == null ? "" : countryOfOrigin;
+    }
+
+    public String getSeasons() {
+        return seasons == null ? "" : seasons;
+    }
+
+    public String getEpisodes() {
+        return episodes == null ? "" : episodes;
+    }
+
+    public String getStartDate() {
+        return startDate == null ? "" : startDate;
+    }
+
+    public String getEndDate() {
+        return endDate == null ? "" : endDate;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setGenres(List<String> genres) {
+        this.genres = genres;
+    }
+
+    public void setCreators(List<String> creators) {
+        this.creators = creators;
+    }
+
+    public void setCasts(List<String> casts) {
+        this.casts = casts;
+    }
+
+    public void setCountryOfOrigin(String countryOfOrigin) {
+        this.countryOfOrigin = countryOfOrigin;
+    }
+
+    public void setSeasons(String seasons) {
+        this.seasons = seasons;
+    }
+
+    public void setEpisodes(String episodes) {
+        this.episodes = episodes;
+    }
+
+    public void setStartDate(String startDate) {
+        this.startDate = startDate;
+    }
+
+    public void setEndDate(String endDate) {
+        this.endDate = endDate;
+    }
 
     @JsonProperty("title")
     String title;
@@ -55,6 +130,8 @@ public class ShowMetadata {
     @JsonProperty("endDate")
     String endDate;
 
+
+
     public String getFilename() {
 
         if (filename == null) {
@@ -65,7 +142,7 @@ public class ShowMetadata {
 
     @Override
     public String toString() {
-        return "ShowMetadata{" +
+        return "{" +
                 "\ntitle='" + title + '\'' +
                 ", \ngenres=" + genres +
                 ", \ncreators=" + creators +

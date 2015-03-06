@@ -7,9 +7,13 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * Main processor
+ * Core Parser and processor for TV Show. This is the workhorse.
+ *
+ * Convert HTML fragment into Jsoup objects (DOM). Walk the DOM. Extract TV Show metadata.
  *
  * @author Wilkin Cheung
  */
@@ -19,41 +23,63 @@ public class TVShowProcessor {
 
     private int limit = Constants.UNLIMITED;
 
+    private boolean isInitialized = false;
+
+    private Stat stat = new Stat();
+
+
     public TVShowProcessor() {
-        init();
     }
 
+    public TVShowProcessor(List<String> shows) {
+        this.shows = shows;
+        this.isInitialized = true;
+    }
 
     private void init() {
         if (shows.isEmpty()) {
             shows = Util.readLinesFromFile(Constants.TV_SHOW_FILE_LOCATION);
         }
+        this.isInitialized = true;
     }
 
     public void process() {
-        try {
-
-            List<String> actualShowList = shows;
-
-            if (actualShowList == null || actualShowList.size() == 0) {
-                System.err.println("tvShowFiles is empty");
-                System.exit(-1);
-            } else {
-                info("Number of Shows found: " + actualShowList.size());
-            }
-
-            int count = 0;
-            for (String show : actualShowList) {
-                count++;
-                if ((limit != Constants.UNLIMITED) && (count > limit)) {
-                    break;
-                }
-                String url = Constants.WIKIPEDIA_ROOT + show;
-                processShow(url);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (!isInitialized) {
+            init();
         }
+
+        List<String> actualShowList = shows;
+
+        if (actualShowList == null || actualShowList.size() == 0) {
+            System.err.println("tvShowFiles is empty");
+            System.exit(-1);
+        } else {
+            info("Number of Shows found: " + actualShowList.size());
+        }
+
+        int count = 0;
+
+        stat.startTime = System.currentTimeMillis();
+
+        for (String show : actualShowList) {
+            count++;
+            if ((limit != Constants.UNLIMITED) && (count > limit)) {
+                break;
+            }
+            String url = Constants.WIKIPEDIA_ROOT + show;
+            try {
+                processShow(url);
+                ++stat.successCount;
+            } catch (IOException e) {
+                ++stat.errorCount;
+                System.err.println("Cannot process url " + url);
+                e.printStackTrace();
+            }
+        }
+
+        info(" Time taken: " + (System.currentTimeMillis() - stat.startTime) / 1000 + " seconds");
+        info(" Number of files created: " + stat.successCount);
+        info(" Number of errors: " + stat.errorCount);
     }
 
 
@@ -78,10 +104,6 @@ public class TVShowProcessor {
         //System.out.println(s);
     }
 
-    public static void main(String[] args) {
-        new TVShowProcessor();
-    }
-
     /**
      * JSON Format:
      * <p/>
@@ -99,17 +121,22 @@ public class TVShowProcessor {
      *
      * @throws IOException
      */
-
     public void processShow(String url) throws IOException {
 
         debug("Fetching url: " + url);
+
         Document doc = Jsoup.connect(url).get();
 
-        Elements infobox = doc.select("table.infobox");
+        processShow(doc);
+    }
 
-        Document doc2 = Jsoup.parseBodyFragment(infobox.html());
+    public void processShow(Document fullDocument) throws IOException {
 
-        Node rootNode = doc2.childNodes().get(0);
+        Elements infobox = fullDocument.select("table.infobox");
+
+        Document innerDocument = Jsoup.parseBodyFragment(infobox.html());
+
+        Node rootNode = innerDocument.childNodes().get(0);
 
         // 0 is <head>
         // 1 is <body>
@@ -119,8 +146,6 @@ public class TVShowProcessor {
         try {
             showMetadata = parseOneShow(bodyNode);
         } catch (Throwable e) {
-            System.err.println("error processing url: " + url);
-
             e.printStackTrace();
 
             return;
@@ -130,12 +155,14 @@ public class TVShowProcessor {
         debug(showMetadata.toString());
         debug("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
+
         if (showMetadata.shouldWriteToFile()) {
-            info("=> Writing to file " + showMetadata.getFilename() + " for url " + url);
+            info("=> Writing to file: " + showMetadata.getFilename());
             Util.toFile(showMetadata.getFilename(), showMetadata);
+
             debug("done writing to file");
         } else {
-            debug("nothing to write. Empty show title for url " + url);
+            debug("nothing to write. Empty show title");
         }
     }
 
@@ -148,7 +175,7 @@ public class TVShowProcessor {
         for (int i = 0; i < mainNodes.size() - 1; i++) {
             Node currentNode = mainNodes.get(i);
 
-            //debug("Node #" + i + "(" + currentNode.nodeName() + "):" + currentNode);
+            debug("Node #" + i + "(" + currentNode.nodeName() + "):" + currentNode);
 
             String nodeName = currentNode.nodeName();
 
@@ -188,7 +215,7 @@ public class TVShowProcessor {
                     showMetadata.episodes = extractSingleField(currentNode);
                 }
 
-                // original run
+                // Original run
                 // example: Friends
                 //<th scope="row" style="text-align:left">Original run</th>
 //                <td>September&#160;22,&#160;1994<span style="display:none">&#160;(<span class="bday dtstart published updated">1994-09-22</span>)</span>&#160;– May&#160;6,&#160;2004<span style="display:none">&#160;(<span class="dtend">2004-05-06</span>)</span></td>
@@ -196,7 +223,8 @@ public class TVShowProcessor {
 
                 //TODO: fix this
                 if ("Original run".equals(currentNode.toString()) && showMetadata.startDate == null) {
-                    extractFieldOriginalRun(currentNode);
+                    // special case (hack)
+                    extractFieldOriginalRun(currentNode, showMetadata);
                 }
             }
         }
@@ -204,18 +232,41 @@ public class TVShowProcessor {
         return showMetadata;
     }
 
-    private void extractFieldOriginalRun(Node currentNode) {
+    private void extractFieldOriginalRun(Node currentNode, ShowMetadata showMetadata) {
         debug("IN: extractFieldOriginalRun");
-        Node endNode = findNextNonEmptySiblingNode(currentNode);
+        Node spanNode = findNextSpanSiblingNode(currentNode);
 
-        debug("  endNode is " + endNode);
+        debug("  spanNode is " + spanNode);
+
+        if (spanNode == null) {
+            return;
+        }
+
+        // This is uber hack
+        // search for Date pattern YYYY-MM-DD (ISO 8601) inside <span> node
+        // first match is start date
+        // second match is end date
+        Matcher m = Constants.DATE_PATTERN_ISO_8601.matcher(spanNode.toString());
+
+        // TODO: clean this up
+        if (m.find()) {
+            showMetadata.startDate = m.group(1);
+
+            spanNode = findNextSpanSiblingNode(spanNode);
+            if (spanNode != null) {
+                m = Constants.DATE_PATTERN_ISO_8601.matcher(spanNode.toString());
+                if (m.find()) {
+                    showMetadata.endDate = m.group(1);
+                }
+            }
+        }
     }
 
     private String extractSingleField(Node currentNode) {
         // Lookup next few nodes, until hitting text node that is not empty
         // Then between currentNode and that text node, look for hyperlink <a> attribute "title"
         // each <a> represents a genre
-        Node endNode = findNextNonEmptySiblingNode(currentNode);
+        Node endNode = findNextTextSiblingNode(currentNode);
 
         return endNode.toString();
     }
@@ -227,7 +278,7 @@ public class TVShowProcessor {
         // Lookup next few nodes, until hitting text node that is not empty
         // Then between currentNode and that text node, look for hyperlink <a> attribute "title"
         // each <a> represents a genre
-        Node endNode = findNextNonEmptySiblingNode(currentNode);
+        Node endNode = findNextTextSiblingNode(currentNode);
 
         // go from current index to end index, extract genre
         if (endNode != null && endNode.siblingIndex() > currentNode.siblingIndex()) {
@@ -288,14 +339,22 @@ public class TVShowProcessor {
         return values;
     }
 
-    private Node findNextNonEmptySiblingNode(Node currentNode) {
+    private Node findNextSpanSiblingNode(Node currentNode) {
+        return findNextNonEmptySiblingNode(currentNode, "span");
+    }
+
+    private Node findNextTextSiblingNode(Node currentNode) {
+        return findNextNonEmptySiblingNode(currentNode, "#text");
+    }
+
+    private Node findNextNonEmptySiblingNode(Node currentNode, String findNodeType) {
 
         Node nextNode = currentNode.nextSibling();
 
         while (nextNode != null) {
             String nodeName = nextNode.nodeName();
 
-            if ("#text".equals(nodeName) && !StringUtil.isBlank(nextNode.toString())) {
+            if (findNodeType.equals(nodeName) && !StringUtil.isBlank(nextNode.toString())) {
                 return nextNode;
             }
 
@@ -309,5 +368,11 @@ public class TVShowProcessor {
      */
     private void info(Object s) {
         System.out.println(s);
+    }
+
+    private static class Stat {
+        int errorCount;
+        int successCount;
+        long startTime;
     }
 }
