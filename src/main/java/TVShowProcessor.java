@@ -43,9 +43,6 @@ import java.util.regex.Matcher;
  */
 public class TVShowProcessor {
 
-    public static final String TEXT = "#text";
-    public static final String SPAN = "span";
-    public static final String A = "a";
 
     // List of TV Shows to be processed
     private List<String> shows = new ArrayList<String>();
@@ -86,6 +83,13 @@ public class TVShowProcessor {
     }
 
     /**
+     * Utility method to print info to Stdout
+     */
+    private static void info(Object s) {
+        System.out.println(s);
+    }
+
+    /**
      * Initialize Show. Optionally read the list of TV Shows from disk.
      */
     private void init() {
@@ -121,10 +125,11 @@ public class TVShowProcessor {
             if ((limit != Constants.UNLIMITED) && (count > limit)) {
                 break;
             }
-            String url = Constants.WIKIPEDIA_ROOT + show;
+            String url = Constants.WIKIPEDIA_ROOT + Constants.WIKI + show;
             try {
-                processShow(url);
-                ++stat.successCount;
+                ShowMetadata showMetadata = new ShowMetadata();
+                showMetadata.filename = Util.replaceSpecialCharacterWithUnderscore(show);
+                processShow(url, showMetadata);
             } catch (IOException e) {
                 ++stat.errorCount;
                 System.err.println("Cannot process url " + url);
@@ -133,7 +138,7 @@ public class TVShowProcessor {
         }
 
         info(" Time taken: " + (System.currentTimeMillis() - stat.startTime) / 1000 + " seconds");
-        info(" Number of files created: " + stat.successCount);
+        info(" Number of TV Show files created: " + stat.successCount);
         info(" Number of errors: " + stat.errorCount);
     }
 
@@ -143,13 +148,13 @@ public class TVShowProcessor {
      * @param url a TV Show URL
      * @throws IOException Fail to fetch from URL
      */
-    public void processShow(String url) throws IOException {
+    public void processShow(String url, ShowMetadata showMetadata) throws IOException {
 
         debug("Fetching url: " + url);
 
         Document doc = Jsoup.connect(url).get();
 
-        processShow(doc);
+        processShow(doc, showMetadata);
     }
 
     /**
@@ -158,7 +163,7 @@ public class TVShowProcessor {
      * @param fullDocument Jsoup Document
      * @throws IOException Fail to parse Document
      */
-    public void processShow(Document fullDocument) throws IOException {
+    public void processShow(Document fullDocument, ShowMetadata showMetadata) throws IOException {
 
         // rely on table.infobox, which is the wikipedia box on the right side on each TV Show page.
         Elements infobox = fullDocument.select("table.infobox");
@@ -171,10 +176,10 @@ public class TVShowProcessor {
         // 1 is <body>
         Node bodyNode = rootNode.childNodes().get(1);
 
-        ShowMetadata showMetadata = null;
         try {
-            showMetadata = parseOneShow(bodyNode);
+            parseOneShow(bodyNode, showMetadata);
         } catch (Throwable e) {
+            ++stat.errorCount;
             e.printStackTrace();
             return;
         }
@@ -187,6 +192,8 @@ public class TVShowProcessor {
         if (showMetadata.shouldWriteToFile()) {
             info("=> Writing to file: " + showMetadata.getFilename());
             Util.toFile(showMetadata.getFilename(), showMetadata);
+            ++stat.successCount;
+
             //Util.toStdout(showMetadata);
             debug("done writing to file");
         } else {
@@ -200,9 +207,7 @@ public class TVShowProcessor {
      * @param bodyNode Jsoup Node
      * @return ShowMetadata object
      */
-    public ShowMetadata parseOneShow(Node bodyNode) {
-
-        ShowMetadata showMetadata = new ShowMetadata();
+    public void parseOneShow(Node bodyNode, ShowMetadata showMetadata) {
 
         List<Node> mainNodes = bodyNode.childNodes();
 
@@ -213,7 +218,7 @@ public class TVShowProcessor {
 
             String nodeName = currentNode.nodeName();
 
-            if (TEXT.equals(nodeName)) {
+            if (Constants.TEXT.equals(nodeName)) {
 
                 // Set title
                 if (!StringUtil.isBlank(currentNode.toString()) && showMetadata.title == null) {
@@ -221,27 +226,27 @@ public class TVShowProcessor {
                 }
 
                 // Set genre
-                if ("Genre".equals(currentNode.toString()) && showMetadata.genres.isEmpty()) {
+                if (Constants.GENRE.equals(currentNode.toString()) && showMetadata.genres.isEmpty()) {
                     showMetadata.genres = Util.stripParenthesis(extractFieldAsList(currentNode, "title"));
                 }
 
-                if ("Created by".equals(currentNode.toString()) && showMetadata.creators.isEmpty()) {
+                if (Constants.CREATED_BY.equals(currentNode.toString()) && showMetadata.creators.isEmpty()) {
                     showMetadata.creators = Util.stripParenthesis(extractFieldAsList(currentNode, "title"));
                 }
 
-                if ("Developed by".equals(currentNode.toString()) && showMetadata.creators.isEmpty()) {
+                if (Constants.DEVELOPED_BY.equals(currentNode.toString()) && showMetadata.creators.isEmpty()) {
                     showMetadata.creators = Util.stripParenthesis(extractFieldAsList(currentNode, "title"));
                 }
 
-                if ("Starring".equals(currentNode.toString()) && showMetadata.casts.isEmpty()) {
-                    showMetadata.casts =Util.stripParenthesis(extractFieldAsList(currentNode, "title"));
+                if (Constants.STARRING.equals(currentNode.toString()) && showMetadata.casts.isEmpty()) {
+                    showMetadata.casts = Util.stripParenthesis(extractFieldAsList(currentNode, "title"));
                 }
 
                 // country of origin can be hyperlink (eg. Canada) OR text (eg. United States)
-                if ("Country of origin".equals(currentNode.toString()) && showMetadata.countryOfOrigin == null) {
+                if (Constants.COUNTRY_OF_ORIGIN.equals(currentNode.toString()) && showMetadata.countryOfOrigin == null) {
                     List<String> nodeTypes = new ArrayList<String>();
-                    nodeTypes.add(TEXT);
-                    nodeTypes.add(A);
+                    nodeTypes.add(Constants.TEXT);
+                    nodeTypes.add(Constants.A);
 
                     showMetadata.countryOfOrigin = extractSingleField(currentNode, nodeTypes);
 
@@ -255,12 +260,12 @@ public class TVShowProcessor {
                 }
 
 
-                if ("No. of seasons".equals(currentNode.toString()) && showMetadata.seasons == null) {
-                    showMetadata.seasons = Util.stripParenthesis(extractSingleField(currentNode, TEXT));
+                if (Constants.NO_OF_SEASONS.equals(currentNode.toString()) && showMetadata.seasons == null) {
+                    showMetadata.seasons = Util.stripParenthesis(extractSingleField(currentNode, Constants.TEXT));
                 }
 
-                if ("No. of episodes".equals(currentNode.toString()) && showMetadata.episodes == null) {
-                    showMetadata.episodes = Util.stripParenthesis(extractSingleField(currentNode, TEXT));
+                if (Constants.NO_OF_EPISODES.equals(currentNode.toString()) && showMetadata.episodes == null) {
+                    showMetadata.episodes = Util.stripParenthesis(extractSingleField(currentNode, Constants.TEXT));
                 }
 
                 // Original run
@@ -276,8 +281,6 @@ public class TVShowProcessor {
                 }
             }
         }
-
-        return showMetadata;
     }
 
     /**
@@ -364,12 +367,9 @@ public class TVShowProcessor {
                 currentNode = currentNode.nextSibling();
 
                 // value is embedded in hyperlink <a>
-                if ("a".equals(currentNode.nodeName())) {
+                if (Constants.A.equals(currentNode.nodeName())) {
                     values.add(currentNode.attr(fieldName));
-                }
-
-                if ("div".equals(currentNode.nodeName())) {
-                    //debug("IN:div extractFieldAsList()");
+                } else if (Constants.DIV.equals(currentNode.nodeName())) {
 
                     Document doc = Jsoup.parseBodyFragment(currentNode.outerHtml());
 
@@ -381,21 +381,36 @@ public class TVShowProcessor {
                     // 1 is <body>
                     Node bodyNode = rootNode.childNodes().get(1);
 
-
                     /*
                      * <div>
                      *   <ul>
                      *      <li>
                      *      <li>
                      */
-                    List<Node> mainNodes = bodyNode.childNodes().get(0).childNodes().get(1).childNodes();
+                    //List<Node> mainNodes = bodyNode.childNodes().get(0).childNodes().get(1).childNodes();
 
-                    for (int i = 0; i < mainNodes.size(); i++) {
+
+                    Node oneUnderDiv = bodyNode.childNodes().get(0);
+
+                    if (oneUnderDiv == null) {
+                        continue;
+                    }
+
+                    int size = oneUnderDiv.childNodes().size();
+
+                    if (size < 2) {
+                        ++stat.skipCount;
+                        continue;
+                    }
+
+                    Node twoUnderDiv = oneUnderDiv.childNodes().get(1);
+
+                    List<Node>twoUnderDivNodes = twoUnderDiv.childNodes();
+
+                    for (int i = 0; i < twoUnderDivNodes.size(); i++) {
 
                         //<li><a href="/wiki/Andrew_Lincoln" title="Andrew Lincoln">Andrew Lincoln</a></li>
-                        Node liNode = mainNodes.get(i);
-
-                        //debug(" SIZE " + liNode.childNodes().size());
+                        Node liNode = twoUnderDivNodes.get(i);
 
                         if (liNode.childNodes().size() == 0) {
                             continue;
@@ -404,7 +419,6 @@ public class TVShowProcessor {
                         liNode = liNode.childNode(0);
 
                         //debug("  InnerNode #" + i + "(" + liNode.nodeName() + "):" + liNode);
-
 
                         values.add(liNode.attr(fieldName));
                     }
@@ -415,7 +429,7 @@ public class TVShowProcessor {
         // if values is still empty, that could mean the field is singular (not list).
         // so search as a singular value
         if (values.isEmpty()) {
-            String value = extractSingleField(originalCurrentNode, TEXT);
+            String value = extractSingleField(originalCurrentNode, Constants.TEXT);
             if (value != null && !value.isEmpty()) {
                 values.add(value);
             }
@@ -432,7 +446,7 @@ public class TVShowProcessor {
      */
     private Node findNextSpanSiblingNode(Node currentNode) {
         List<String> nodeTypes = new ArrayList<String>();
-        nodeTypes.add(SPAN);
+        nodeTypes.add(Constants.SPAN);
         return findNextNonEmptySiblingNode(currentNode, nodeTypes);
     }
 
@@ -444,7 +458,7 @@ public class TVShowProcessor {
      */
     private Node findNextTextSiblingNode(Node currentNode) {
         List<String> nodeTypes = new ArrayList<String>();
-        nodeTypes.add(TEXT);
+        nodeTypes.add(Constants.TEXT);
         return findNextNonEmptySiblingNode(currentNode, nodeTypes);
     }
 
@@ -509,18 +523,12 @@ public class TVShowProcessor {
     }
 
     /**
-     * Utility method to print info to Stdout
-     */
-    private void info(Object s) {
-        System.out.println(s);
-    }
-
-    /**
      * Utility class to store stats.
      */
     private static class Stat {
         int errorCount;
         int successCount;
+        int skipCount;
         long startTime;
     }
 

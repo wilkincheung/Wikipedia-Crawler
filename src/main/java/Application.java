@@ -58,7 +58,7 @@ public class Application {
             Document doc = Jsoup.connect(Constants.CRAWLER_URL).get();
 
             // fetches all links
-            Elements elements = doc.select("a[href]");
+            Elements elements = doc.select(Constants.A_HREF);
 
             debug("Total #links: " + elements.size());
 
@@ -70,10 +70,12 @@ public class Application {
 
             while (iterator.hasNext()) {
                 Element element = iterator.next();
-                String showId = element.attr("href");
-                if (showId.startsWith("/wiki/")) {
-                    debug(showId);
-                    builder.append(showId).append("\n");
+                String showId = element.attr(Constants.HREF);
+                if (showId.startsWith(Constants.WIKI)) {
+
+                    String show = showId.replaceFirst(Constants.WIKI, "");
+                    debug(show);
+                    builder.append(show).append("\n");
                 }
             }
 

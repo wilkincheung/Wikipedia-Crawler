@@ -43,7 +43,7 @@ public class ProcessorTest {
      * Full-fledge test. This actually runs the entire program.
      */
     @Test
-    public void test_Application_integration_test() {
+    public void application_integration_test() {
         new Application();
     }
 
@@ -78,16 +78,6 @@ public class ProcessorTest {
     }
 
     @Test
-    @Ignore
-    public void original_run() throws IOException {
-        String html = loadFile("wd_alternate_original_run.html");
-
-        Document doc = Jsoup.parseBodyFragment(html);
-
-        new TVShowProcessor().processShow(doc);
-    }
-
-    @Test
     public void extract_title() {
         Matcher m = Constants.TITLE_PATTERN.matcher("<a href=\"aaa.com\" title=\"TITLE\"");
         assertTrue(m.find());
@@ -95,18 +85,21 @@ public class ProcessorTest {
     }
 
     @Test
+    @Ignore
     public void processor__show1() {
-        process_one_show("/wiki/Breaking_Bad");
+        process_one_show("Breaking_Bad");
     }
 
     @Test
+    @Ignore
     public void processor__show2() {
-        process_one_show("/wiki/240-Robert");
+        process_one_show("240-Robert");
     }
 
     @Test
+    @Ignore
     public void processor__show3() {
-        process_one_show("/wiki/15/Love");
+        process_one_show("15/Love");
     }
 
     /**

@@ -21,6 +21,7 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
  */
+
 import java.util.regex.Pattern;
 
 /**
@@ -33,8 +34,10 @@ public class Constants {
     // Wikipedia Base URL
     public static final String WIKIPEDIA_ROOT = "http://en.wikipedia.org";
 
+    public static final String WIKI = "/wiki/";
+
     // Crawler entry point
-    public static final String CRAWLER_URL = WIKIPEDIA_ROOT + "/wiki/List_of_television_programs_by_name";
+    public static final String CRAWLER_URL = WIKIPEDIA_ROOT + WIKI + "List_of_television_programs_by_name";
 
     // File that temporary holds a list of TV Shows
     public static final String FILE_LIST_OF_TV_SHOWS = "list_of_tv_shows.txt";
@@ -51,4 +54,22 @@ public class Constants {
     // title Pattern
     public static final Pattern TITLE_PATTERN = Pattern.compile("title=\"(.*)\"");
 
+    // The following are nodeNames
+    public static final String TEXT = "#text";
+    public static final String SPAN = "span";
+    public static final String A = "a";
+
+    // The following are identifiers on TV Show page
+    public static final String NO_OF_SEASONS = "No. of seasons";
+    public static final String NO_OF_EPISODES = "No. of episodes";
+    public static final String COUNTRY_OF_ORIGIN = "Country of origin";
+    public static final String STARRING = "Starring";
+    public static final String DEVELOPED_BY = "Developed by";
+    public static final String CREATED_BY = "Created by";
+    public static final String GENRE = "Genre";
+    public static final String DIV = "div";
+
+    // Application level parsing identifier
+    public static final String HREF = "href";
+    public static final String A_HREF = "a[href]";
 }
