@@ -92,6 +92,10 @@ public class Util {
         mapper.writerWithDefaultPrettyPrinter().writeValue(new File(filename), obj);
     }
 
+    public static void toStdout(Object obj) throws IOException {
+        mapper.writerWithDefaultPrettyPrinter().writeValue(System.out, obj);
+    }
+
     /**
      * Get file content as UTF-8 string
      * @param path path on disk
@@ -108,5 +112,22 @@ public class Util {
             buffer.append(line).append("\n");
         }
         return buffer;
+    }
+
+    public static List<String> stripParenthesis(List<String> inputs) {
+        List<String> outputs = new ArrayList<String>();
+        for (String in : inputs) {
+            outputs.add(stripParenthesis(in));
+        }
+        return outputs;
+    }
+
+    /**
+     * Strip all parenthesis and everything inclusive
+     * @param in String
+     * @return converted String without parenthesis
+     */
+    public static String stripParenthesis(String in) {
+        return in.replaceAll("\\(.*\\)", "");
     }
 }

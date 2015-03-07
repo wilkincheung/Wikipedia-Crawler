@@ -47,4 +47,8 @@ public class Constants {
 
     // ISO-8601 Date Pattern (ie. YYYY-MM-DD)
     public static final Pattern DATE_PATTERN_ISO_8601 = Pattern.compile("([0-9]{4}-[0-9]{2}-[0-9]{2})");
+
+    // title Pattern
+    public static final Pattern TITLE_PATTERN = Pattern.compile("title=\"(.*)\"");
+
 }

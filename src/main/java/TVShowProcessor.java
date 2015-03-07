@@ -21,6 +21,7 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
  */
+
 import org.jsoup.Jsoup;
 import org.jsoup.helper.StringUtil;
 import org.jsoup.nodes.Document;
@@ -31,18 +32,20 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Core Parser and processor for TV Show. This is the workhorse.
- *
+ * <p/>
  * Convert HTML fragment into Jsoup objects (DOM). Walk the DOM. Extract TV Show metadata. Save each TV Show as
  * JSON to disk.
- *
  *
  * @author Wilkin Cheung
  */
 public class TVShowProcessor {
+
+    public static final String TEXT = "#text";
+    public static final String SPAN = "span";
+    public static final String A = "a";
 
     // List of TV Shows to be processed
     private List<String> shows = new ArrayList<String>();
@@ -65,11 +68,21 @@ public class TVShowProcessor {
 
     /**
      * Overloaded Constructor for JUnit testing
+     *
      * @param shows List of shows as String
      */
     public TVShowProcessor(List<String> shows) {
         this.shows = shows;
         this.isInitialized = true;
+    }
+
+    /**
+     * Utility method to print a debug statement to STDOUT
+     *
+     * @param s String
+     */
+    private static void debug(String s) {
+        //System.out.println(s);
     }
 
     /**
@@ -141,6 +154,7 @@ public class TVShowProcessor {
 
     /**
      * Process a Jsoup Document.
+     *
      * @param fullDocument Jsoup Document
      * @throws IOException Fail to parse Document
      */
@@ -173,7 +187,7 @@ public class TVShowProcessor {
         if (showMetadata.shouldWriteToFile()) {
             info("=> Writing to file: " + showMetadata.getFilename());
             Util.toFile(showMetadata.getFilename(), showMetadata);
-
+            //Util.toStdout(showMetadata);
             debug("done writing to file");
         } else {
             debug("nothing to write. Empty show title");
@@ -182,6 +196,7 @@ public class TVShowProcessor {
 
     /**
      * Parse one TV Show into Java Bean
+     *
      * @param bodyNode Jsoup Node
      * @return ShowMetadata object
      */
@@ -198,7 +213,7 @@ public class TVShowProcessor {
 
             String nodeName = currentNode.nodeName();
 
-            if ("#text".equals(nodeName)) {
+            if (TEXT.equals(nodeName)) {
 
                 // Set title
                 if (!StringUtil.isBlank(currentNode.toString()) && showMetadata.title == null) {
@@ -207,31 +222,45 @@ public class TVShowProcessor {
 
                 // Set genre
                 if ("Genre".equals(currentNode.toString()) && showMetadata.genres.isEmpty()) {
-                    showMetadata.genres = extractFieldAsList(currentNode, "title");
+                    showMetadata.genres = Util.stripParenthesis(extractFieldAsList(currentNode, "title"));
                 }
 
                 if ("Created by".equals(currentNode.toString()) && showMetadata.creators.isEmpty()) {
-                    showMetadata.creators = extractFieldAsList(currentNode, "title");
+                    showMetadata.creators = Util.stripParenthesis(extractFieldAsList(currentNode, "title"));
                 }
 
                 if ("Developed by".equals(currentNode.toString()) && showMetadata.creators.isEmpty()) {
-                    showMetadata.creators = extractFieldAsList(currentNode, "title");
+                    showMetadata.creators = Util.stripParenthesis(extractFieldAsList(currentNode, "title"));
                 }
 
                 if ("Starring".equals(currentNode.toString()) && showMetadata.casts.isEmpty()) {
-                    showMetadata.casts = extractFieldAsList(currentNode, "title");
+                    showMetadata.casts =Util.stripParenthesis(extractFieldAsList(currentNode, "title"));
                 }
 
+                // country of origin can be hyperlink (eg. Canada) OR text (eg. United States)
                 if ("Country of origin".equals(currentNode.toString()) && showMetadata.countryOfOrigin == null) {
-                    showMetadata.countryOfOrigin = extractSingleField(currentNode);
+                    List<String> nodeTypes = new ArrayList<String>();
+                    nodeTypes.add(TEXT);
+                    nodeTypes.add(A);
+
+                    showMetadata.countryOfOrigin = extractSingleField(currentNode, nodeTypes);
+
+                    // if countryOfOrigin contains <a> tag then it needs filtering
+                    if (!showMetadata.countryOfOrigin.isEmpty() && showMetadata.countryOfOrigin.contains("title=")) {
+                        Matcher m = Constants.TITLE_PATTERN.matcher(showMetadata.countryOfOrigin);
+                        if (m.find()) {
+                            showMetadata.countryOfOrigin = m.group(1);
+                        }
+                    }
                 }
+
 
                 if ("No. of seasons".equals(currentNode.toString()) && showMetadata.seasons == null) {
-                    showMetadata.seasons = extractSingleField(currentNode);
+                    showMetadata.seasons = Util.stripParenthesis(extractSingleField(currentNode, TEXT));
                 }
 
                 if ("No. of episodes".equals(currentNode.toString()) && showMetadata.episodes == null) {
-                    showMetadata.episodes = extractSingleField(currentNode);
+                    showMetadata.episodes = Util.stripParenthesis(extractSingleField(currentNode, TEXT));
                 }
 
                 // Original run
@@ -254,14 +283,11 @@ public class TVShowProcessor {
     /**
      * Extract original run (start date, end date) from a node
      *
-     * @param currentNode Jsoup Node
+     * @param currentNode  Jsoup Node
      * @param showMetadata Java bean
      */
     private void extractFieldOriginalRun(Node currentNode, ShowMetadata showMetadata) {
-        debug("IN: extractFieldOriginalRun");
         Node spanNode = findNextSpanSiblingNode(currentNode);
-
-        debug("  spanNode is " + spanNode);
 
         if (spanNode == null) {
             return;
@@ -289,25 +315,39 @@ public class TVShowProcessor {
 
     /**
      * Find next non-text sibling from Jsoup Node
+     *
      * @param currentNode Jsoup Node
      * @return Node as String
      */
-    private String extractSingleField(Node currentNode) {
+    private String extractSingleField(Node currentNode, String nodeType) {
         // Lookup next few nodes, until hitting text node that is not empty
         // Then between currentNode and that text node, look for hyperlink <a> attribute "title"
         // each <a> represents a genre
-        Node endNode = findNextTextSiblingNode(currentNode);
+        List<String> nodeTypes = new ArrayList<String>();
+        nodeTypes.add(nodeType);
+        Node endNode = findNextNonEmptySiblingNode(currentNode, nodeTypes);
+
+        return endNode.toString();
+    }
+
+    private String extractSingleField(Node currentNode, List<String> nodeTypes) {
+
+        Node endNode = findNextNonEmptySiblingNode(currentNode, nodeTypes);
 
         return endNode.toString();
     }
 
     /**
      * Find next sibling for fieldName (such as text) from Jsoup Node
+     *
      * @param currentNode Jsoup Node
-     * @param fieldName String
+     * @param fieldName   String
      * @return List of Nodes as String
      */
     private List<String> extractFieldAsList(Node currentNode, String fieldName) {
+
+        // save a pointer to currentNode, because the algorithm will alter it, and we have a need to use the original
+        Node originalCurrentNode = currentNode;
 
         List<String> values = new ArrayList<String>();
 
@@ -372,41 +412,58 @@ public class TVShowProcessor {
             }
         }
 
+        // if values is still empty, that could mean the field is singular (not list).
+        // so search as a singular value
+        if (values.isEmpty()) {
+            String value = extractSingleField(originalCurrentNode, TEXT);
+            if (value != null && !value.isEmpty()) {
+                values.add(value);
+            }
+        }
+
         return values;
     }
 
     /**
      * Find next span sibling node
+     *
      * @param currentNode Jsoup Node
      * @return Next span sibling node
      */
     private Node findNextSpanSiblingNode(Node currentNode) {
-        return findNextNonEmptySiblingNode(currentNode, "span");
+        List<String> nodeTypes = new ArrayList<String>();
+        nodeTypes.add(SPAN);
+        return findNextNonEmptySiblingNode(currentNode, nodeTypes);
     }
 
     /**
      * Find next text sibling node
+     *
      * @param currentNode Jsoup Node
      * @return Next text sibling node
      */
     private Node findNextTextSiblingNode(Node currentNode) {
-        return findNextNonEmptySiblingNode(currentNode, "#text");
+        List<String> nodeTypes = new ArrayList<String>();
+        nodeTypes.add(TEXT);
+        return findNextNonEmptySiblingNode(currentNode, nodeTypes);
     }
 
     /**
-     * Find next non empty sibling node
-     * @param currentNode  Jsoup Node
-     * @param findNodeType Node type (for example, text or span)
+     * Find next non empty sibling node, if findNodeTypes contains more than one value.
+     * For example, TEXT and SPAN, then the first value gets hit will win.
+     *
+     * @param currentNode   Jsoup Node
+     * @param findNodeTypes Node types (for example, text or span)
      * @return Jsoup Node if found; null otherwise
      */
-    private Node findNextNonEmptySiblingNode(Node currentNode, String findNodeType) {
+    private Node findNextNonEmptySiblingNode(Node currentNode, List<String> findNodeTypes) {
 
         Node nextNode = currentNode.nextSibling();
 
         while (nextNode != null) {
             String nodeName = nextNode.nodeName();
 
-            if (findNodeType.equals(nodeName) && !StringUtil.isBlank(nextNode.toString())) {
+            if (findNodeTypes.contains(nodeName) && !StringUtil.isBlank(nextNode.toString())) {
                 return nextNode;
             }
 
@@ -415,9 +472,9 @@ public class TVShowProcessor {
         return null;
     }
 
-
     /**
      * Getter for list of TV Shows
+     *
      * @return List of String
      */
     public List<String> getShows() {
@@ -426,6 +483,7 @@ public class TVShowProcessor {
 
     /**
      * Getter for list of TV Shows
+     *
      * @param shows List of String
      */
     public void setShows(List<String> shows) {
@@ -434,6 +492,7 @@ public class TVShowProcessor {
 
     /**
      * Getter for limit
+     *
      * @return int
      */
     public int getLimit() {
@@ -442,18 +501,11 @@ public class TVShowProcessor {
 
     /**
      * Setter for limit
+     *
      * @param limit int
      */
     public void setLimit(int limit) {
         this.limit = limit;
-    }
-
-    /**
-     * Utility method to print a debug statement to STDOUT
-     * @param s String
-     */
-    private static void debug(String s) {
-        //System.out.println(s);
     }
 
     /**
@@ -471,4 +523,6 @@ public class TVShowProcessor {
         int successCount;
         long startTime;
     }
+
+
 }

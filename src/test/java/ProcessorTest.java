@@ -48,6 +48,15 @@ public class ProcessorTest {
     }
 
     @Test
+    public void strip_parenthesis() {
+        assertEquals("hello world", Util.stripParenthesis("hello world"));
+        assertEquals("hello ", Util.stripParenthesis("hello (world)"));
+        assertEquals("hello ", Util.stripParenthesis("hello (world) (another)"));
+        assertEquals("hello  XX", Util.stripParenthesis("hello ((world))))) XX"));
+
+    }
+
+    @Test
     public void testDatePattern_startDate() {
         String s = "<td>September&#160;22,&#160;1994<span style=\"display:none\">&#160;(<span class=\"bday dtstart published updated\">1994-09-22</span>)</span>&#160;– May&#160;6,&#160;2004";
         Matcher m = Constants.DATE_PATTERN_ISO_8601.matcher(s);
@@ -70,7 +79,7 @@ public class ProcessorTest {
 
     @Test
     @Ignore
-    public void test_original_run() throws IOException {
+    public void original_run() throws IOException {
         String html = loadFile("wd_alternate_original_run.html");
 
         Document doc = Jsoup.parseBodyFragment(html);
@@ -78,23 +87,39 @@ public class ProcessorTest {
         new TVShowProcessor().processShow(doc);
     }
 
-    @Ignore
     @Test
-    public void test_processor__breaking_bad() {
-        TVShowProcessor processor = new TVShowProcessor();
-
-        List<String> shows = new ArrayList<String>();
-        shows.add("/wiki/Breaking_Bad");
-
-        processor.setShows(shows);
-        processor.process();
+    public void extract_title() {
+        Matcher m = Constants.TITLE_PATTERN.matcher("<a href=\"aaa.com\" title=\"TITLE\"");
+        assertTrue(m.find());
+        assertEquals("TITLE", m.group(1));
     }
 
     @Test
-    @Ignore
-    public void test_processor__ALL_shows() {
+    public void processor__show1() {
+        process_one_show("/wiki/Breaking_Bad");
+    }
+
+    @Test
+    public void processor__show2() {
+        process_one_show("/wiki/240-Robert");
+    }
+
+    @Test
+    public void processor__show3() {
+        process_one_show("/wiki/15/Love");
+    }
+
+    /**
+     * Utility method to process a single show
+     * @param path wikipedia URI for a show (eg. /wiki/Breaking_Bad)
+     */
+    private void process_one_show(String path) {
         TVShowProcessor processor = new TVShowProcessor();
 
+        List<String> shows = new ArrayList<String>();
+        shows.add(path);
+
+        processor.setShows(shows);
         processor.process();
     }
 
@@ -106,7 +131,6 @@ public class ProcessorTest {
         assertEquals("__Hello_World_", Util.replaceSpecialCharacterWithUnderscore("((Hello)World)"));
 
     }
-
 
     /**
      * Utility method to load file that contains HTML fragment
