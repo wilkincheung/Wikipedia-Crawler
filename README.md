@@ -1,9 +1,11 @@
 # Wikipedia-Crawler
 
-Gracenote Wikipedia Crawler exercise. Java implementation. This is the first draft. Most of the requirements are there, but need some polishing and bug fixes. I plan to finish those this evening.
+Wikipedia Crawler. Java implementation. 
 
 ## What does this program do?
 The command "mvn install" runs the main program to filter a list of TV shows from wikipedia. See this link: http://en.wikipedia.org/wiki/List_of_television_programs_by_name. Store the list of shows in a text file in output directory. For each TV show, fetch the show metadata (such as title, casts, creators) and saves as JSON file.
+
+NOTE: ```mvn install``` usually uses to install software. I kinda uses this command to run the whole thing for convenience.
 
 ## Pre-requisites
 * Mac OSX or Linux
